@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>DBA Election Connect</title>
+  <meta name="theme-color" content="#111827">
+  <link rel="manifest" href="manifest.json">
+  <style>
+    :root{
+      --bg:#f5f7fb; --card:#ffffff; --text:#111827; --muted:#6b7280;
+      --accent:#1f4f9a; --accent2:#d4a72c; --border:#e5e7eb; --good:#0f766e;
+      --warn:#a16207; --bad:#b91c1c;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+    .wrap{max-width:1100px;margin:auto;padding:16px}
+    .hero{background:linear-gradient(135deg,#111827,#1f4f9a);color:white;border-radius:22px;padding:18px;display:grid;grid-template-columns:150px 1fr;gap:18px;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.14)}
+    .hero img{width:150px;height:150px;object-fit:cover;border-radius:18px;border:3px solid rgba(255,255,255,.8)}
+    .hero h1{margin:0 0 6px;font-size:30px}
+    .hero h2{margin:0 0 10px;font-size:18px;font-weight:600}
+    .tag{display:inline-block;background:rgba(255,255,255,.12);padding:7px 10px;border-radius:999px;margin:4px 6px 0 0}
+    .count{font-size:28px;font-weight:700;margin-top:12px}
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
+    .stat,.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:15px;box-shadow:0 4px 16px rgba(0,0,0,.04)}
+    .stat b{display:block;font-size:26px;margin-top:4px}
+    .section{margin-top:18px}
+    .section h3{margin:0 0 10px}
+    .agenda{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    .agenda .item{background:white;border:1px solid var(--border);border-radius:14px;padding:12px}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+    input,select,textarea,button{font:inherit}
+    input,select,textarea{width:100%;padding:11px;border:1px solid #cfd5df;border-radius:10px;background:white}
+    textarea{min-height:80px;resize:vertical}
+    button{border:0;border-radius:10px;padding:10px 13px;cursor:pointer;font-weight:700}
+    .primary{background:var(--accent);color:white}
+    .gold{background:var(--accent2);color:#111827}
+    .ghost{background:#eef2f7;color:#111827}
+    .danger{background:#fee2e2;color:var(--bad)}
+    .formgrid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:8px}
+    .adv-list{display:grid;gap:10px}
+    .adv{background:white;border:1px solid var(--border);border-radius:14px;padding:12px;display:grid;grid-template-columns:1fr auto;gap:10px}
+    .adv small{color:var(--muted)}
+    .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+    .chip{font-size:12px;padding:4px 8px;border-radius:999px;background:#eef2ff}
+    .actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+    .templates{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .template{background:white;border:1px solid var(--border);border-radius:14px;padding:12px}
+    .footer{color:var(--muted);font-size:12px;margin:22px 0;text-align:center}
+    @media(max-width:760px){
+      .hero{grid-template-columns:100px 1fr;padding:14px}
+      .hero img{width:100px;height:100px}.hero h1{font-size:22px}.count{font-size:20px}
+      .grid{grid-template-columns:repeat(2,1fr)}
+      .agenda,.templates{grid-template-columns:1fr}
+      .formgrid{grid-template-columns:1fr}
+      .adv{grid-template-columns:1fr}
+      .actions{justify-content:flex-start}
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <section class="hero">
+    <img src="assets/amit-kumar-basatta.jpg" alt="Advocate Amit Kumar Basatta">
+    <div>
+      <div style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;opacity:.85">District Bar Association, Faridabad</div>
+      <h1>Adv. Amit Kumar Basatta</h1>
+      <h2>Candidate for General Secretary</h2>
+      <span class="tag">Election: 11 September 2026</span>
+      <span class="tag">Chamber 553–554</span>
+      <div class="count" id="countdown">Loading countdown…</div>
+      <div style="margin-top:8px">Together for a Stronger Bar</div>
+    </div>
+  </section>
+
+  <div class="grid">
+    <div class="stat">Total Advocates<b id="sTotal">0</b></div>
+    <div class="stat">Supporters<b id="sSupport">0</b></div>
+    <div class="stat">Undecided<b id="sUndecided">0</b></div>
+    <div class="stat">Follow-up<b id="sFollow">0</b></div>
+  </div>
+
+  <section class="section card">
+    <h3>Campaign Agenda</h3>
+    <div class="agenda">
+      <div class="item"><b>Unity</b><br><small>Strengthen coordination and unity among Bar members.</small></div>
+      <div class="item"><b>Transparency</b><br><small>Clear communication and accountable functioning.</small></div>
+      <div class="item"><b>Strong Representation</b><br><small>Firm representation of advocates' concerns and interests.</small></div>
+      <div class="item"><b>Advocate Welfare</b><br><small>Focus on practical welfare, facilities and support for members.</small></div>
+    </div>
+  </section>
+
+  <section class="section card">
+    <h3>Add Advocate / Voter</h3>
+    <div class="formgrid">
+      <input id="name" placeholder="Advocate name">
+      <input id="phone" placeholder="WhatsApp number">
+      <select id="status">
+        <option>Not Contacted</option>
+        <option>Supporter</option>
+        <option>Undecided</option>
+        <option>Contact Later</option>
+        <option>Contacted</option>
+      </select>
+      <button class="primary" onclick="addAdvocate()">ADD</button>
+    </div>
+    <textarea id="note" placeholder="Notes (optional)" style="margin-top:8px"></textarea>
+  </section>
+
+  <section class="section card">
+    <div class="toolbar">
+      <input id="search" placeholder="Search advocate…" oninput="render()" style="flex:1;min-width:220px">
+      <select id="filter" onchange="render()" style="width:auto">
+        <option>All</option><option>Supporter</option><option>Undecided</option>
+        <option>Contact Later</option><option>Contacted</option><option>Not Contacted</option>
+      </select>
+      <button class="ghost" onclick="exportCSV()">EXPORT CSV</button>
+    </div>
+    <h3>Advocate Campaign Tracker</h3>
+    <div id="list" class="adv-list"></div>
+  </section>
+
+  <section class="section card">
+    <h3>Quick WhatsApp Messages</h3>
+    <div class="templates">
+      <div class="template">
+        <b>Personal Appeal</b>
+        <p id="m1">Respected Sir/Ma'am, I humbly seek your support and vote for Adv. Amit Kumar Basatta for General Secretary, District Bar Association Faridabad. Election: 11 September 2026. Together for a Stronger Bar.</p>
+        <button class="gold" onclick="copyText('m1')">COPY</button>
+      </div>
+      <div class="template">
+        <b>Short Reminder</b>
+        <p id="m2">Kind reminder: Please support Adv. Amit Kumar Basatta for General Secretary, DBA Faridabad, on 11 September 2026. Your vote and blessings matter.</p>
+        <button class="gold" onclick="copyText('m2')">COPY</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="footer">
+    Campaign management tool for authorized campaign use. Avoid unsolicited bulk messaging; use WhatsApp sharing responsibly.
+  </div>
+</div>
+
+<script>
+const KEY='dba_advocates_v1';
+let advocates=JSON.parse(localStorage.getItem(KEY)||'[]');
+
+function save(){localStorage.setItem(KEY,JSON.stringify(advocates));render();}
+function cleanPhone(p){return (p||'').replace(/\D/g,'');}
+function addAdvocate(){
+  const name=document.getElementById('name').value.trim();
+  const phone=cleanPhone(document.getElementById('phone').value);
+  const status=document.getElementById('status').value;
+  const note=document.getElementById('note').value.trim();
+  if(!name){alert('Please enter advocate name');return;}
+  advocates.unshift({id:Date.now(),name,phone,status,note,updated:new Date().toISOString()});
+  ['name','phone','note'].forEach(id=>document.getElementById(id).value='');
+  save();
+}
+function updateStatus(id,st){const a=advocates.find(x=>x.id===id); if(a){a.status=st;a.updated=new Date().toISOString();save();}}
+function del(id){if(confirm('Delete this advocate?')){advocates=advocates.filter(x=>x.id!==id);save();}}
+function wa(id){
+  const a=advocates.find(x=>x.id===id); if(!a)return;
+  const text=`Respected ${a.name}, I humbly seek your support and vote for Adv. Amit Kumar Basatta for General Secretary, District Bar Association Faridabad. Election: 11 September 2026. Together for a Stronger Bar.`;
+  let url='https://wa.me/';
+  if(a.phone) url+=a.phone;
+  url+='?text='+encodeURIComponent(text);
+  window.open(url,'_blank');
+  if(a.status==='Not Contacted') updateStatus(id,'Contacted');
+}
+function render(){
+  const q=(document.getElementById('search').value||'').toLowerCase();
+  const f=document.getElementById('filter').value;
+  const rows=advocates.filter(a=>(!q||a.name.toLowerCase().includes(q)||(a.phone||'').includes(q))&&(f==='All'||a.status===f));
+  document.getElementById('list').innerHTML=rows.length?rows.map(a=>`
+    <div class="adv">
+      <div>
+        <b>${escapeHtml(a.name)}</b><br>
+        <small>${a.phone?escapeHtml(a.phone):'No phone saved'}</small>
+        <div class="chips"><span class="chip">${escapeHtml(a.status)}</span>${a.note?`<span class="chip">${escapeHtml(a.note)}</span>`:''}</div>
+      </div>
+      <div class="actions">
+        <button class="primary" onclick="wa(${a.id})">WHATSAPP</button>
+        <select onchange="updateStatus(${a.id},this.value)" style="width:auto">
+          ${['Not Contacted','Supporter','Undecided','Contact Later','Contacted'].map(s=>`<option ${s===a.status?'selected':''}>${s}</option>`).join('')}
+        </select>
+        <button class="danger" onclick="del(${a.id})">DELETE</button>
+      </div>
+    </div>`).join(''):'<small>No advocates added yet.</small>';
+  document.getElementById('sTotal').textContent=advocates.length;
+  document.getElementById('sSupport').textContent=advocates.filter(a=>a.status==='Supporter').length;
+  document.getElementById('sUndecided').textContent=advocates.filter(a=>a.status==='Undecided').length;
+  document.getElementById('sFollow').textContent=advocates.filter(a=>a.status==='Contact Later').length;
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function exportCSV(){
+  const data=[['Name','Phone','Status','Notes','Updated'],...advocates.map(a=>[a.name,a.phone,a.status,a.note,a.updated])];
+  const csv=data.map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='DBA-campaign-advocates.csv';a.click();URL.revokeObjectURL(url);
+}
+function copyText(id){navigator.clipboard.writeText(document.getElementById(id).innerText).then(()=>alert('Message copied'));}
+function tick(){
+  const target=new Date('2026-09-11T09:00:00+05:30').getTime(), now=Date.now(), d=target-now;
+  if(d<=0){document.getElementById('countdown').textContent='Election Day';return;}
+  const days=Math.floor(d/86400000), hrs=Math.floor((d%86400000)/3600000), mins=Math.floor((d%3600000)/60000);
+  document.getElementById('countdown').textContent=`${days}d ${hrs}h ${mins}m to Election Day`;
+}
+setInterval(tick,30000);tick();render();
+</script>
+</body>
+</html>
