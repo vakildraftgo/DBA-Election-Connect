@@ -129,7 +129,7 @@
         <option>All</option><option>Supporter</option><option>Undecided</option>
         <option>Contact Later</option><option>Contacted</option><option>Not Contacted</option>
       </select>
-      <button class="ghost" onclick="loadOfficialVoters()">LOAD OFFICIAL VOTER LIST</button>
+      <button class="ghost" onclick="loadOfficialVoters()">MERGE / UPDATE CONTACT LIST</button>
       <button class="ghost" onclick="document.getElementById('csvImport').click()">IMPORT CSV</button>
       <input id="csvImport" type="file" accept=".csv,text/csv" style="display:none" onchange="importCSV(event)">
       <button class="ghost" onclick="exportCSV()">EXPORT CSV</button>
@@ -179,7 +179,7 @@ function addAdvocate(){
   const status=document.getElementById('status').value;
   const note=document.getElementById('note').value.trim();
   if(!name){alert('Please enter advocate name');return;}
-  advocates.unshift({id:Date.now(),serial:'',name,enrollment:'',address:'',phone,gasPhone:'',gasAddress:'',status,note,updated:new Date().toISOString()});
+  advocates.unshift({id:Date.now(),serial:'',name,enrollment:'',address:'',phone,gasPhone:'',gasAddress:'',source:'Manual',workplace:'',email:'',status,note,updated:new Date().toISOString()});
   ['name','phone','note'].forEach(id=>document.getElementById(id).value='');
   save();
 }
@@ -215,13 +215,14 @@ function callAdv(id,which='primary'){
 function render(){
   const q=(document.getElementById('search').value||'').toLowerCase();
   const f=document.getElementById('filter').value;
-  const rows=advocates.filter(a=>(!q||(a.name||'').toLowerCase().includes(q)||(a.phone||'').includes(q)||(a.enrollment||'').toLowerCase().includes(q)||(a.address||'').toLowerCase().includes(q)||(a.gasPhone||'').includes(q)||(a.gasAddress||'').toLowerCase().includes(q))&&(f==='All'||a.status===f));
+  const rows=advocates.filter(a=>(!q||(a.name||'').toLowerCase().includes(q)||(a.phone||'').includes(q)||(a.enrollment||'').toLowerCase().includes(q)||(a.address||'').toLowerCase().includes(q)||(a.gasPhone||'').includes(q)||(a.gasAddress||'').toLowerCase().includes(q)||(a.workplace||'').toLowerCase().includes(q)||(a.email||'').toLowerCase().includes(q))&&(f==='All'||a.status===f));
   document.getElementById('list').innerHTML=rows.length?rows.map(a=>`
     <div class="adv">
       <div>
         <b>${escapeHtml(a.name)}</b><br>
         <small>${a.enrollment?escapeHtml(a.enrollment)+' · ':''}${a.phone?escapeHtml(a.phone):'No official phone saved'}</small>
         ${a.gasPhone && cleanPhone(a.gasPhone)!==cleanPhone(a.phone)?`<br><small>GAS: ${escapeHtml(a.gasPhone)}</small>`:''}
+        ${a.source?`<br><small>${escapeHtml(a.source)}</small>`:''}
         ${a.address?`<br><small>${escapeHtml(a.address)}</small>`:''}
         <div class="chips"><span class="chip">${escapeHtml(a.status)}</span>${a.note?`<span class="chip">${escapeHtml(a.note)}</span>`:''}</div>
       </div>
@@ -273,6 +274,9 @@ function mergeVoters(rows){
       phone:cleanPhone(rawPhone),
       gasPhone:cleanPhone(String(v['GAS Phone']||v.gasPhone||'').trim()),
       gasAddress:String(v['GAS Address']||v.gasAddress||'').trim(),
+      source:String(v.Source||v.source||'').trim(),
+      workplace:String(v['Work Place']||v.workplace||'').trim(),
+      email:String(v.Email||v.email||'').trim(),
       status:old?.status || String(v.Status||v.status||'Not Contacted').trim() || 'Not Contacted',
       note:old?.note || String(v.Notes||v.note||'').trim(),
       updated:old?.updated || ''
@@ -288,7 +292,7 @@ async function loadOfficialVoters(){
     if(!r.ok) throw new Error('voters.json not found');
     const rows=await r.json();
     mergeVoters(rows);
-    alert(`${rows.length} official voter records loaded. Existing campaign statuses were preserved.`);
+    alert(`${rows.length} voter/contact records merged. Existing campaign statuses and notes were preserved.`);
   }catch(e){
     alert('Could not load voters.json. Make sure voters.json is uploaded beside index.html on Render/GitHub.');
   }
@@ -312,8 +316,8 @@ function importCSV(event){
   reader.readAsText(file);
 }
 function exportCSV(){
-  const data=[['S.No','Name','Enrollment No.','Address','Phone','GAS Phone','GAS Address','Status','Notes','Updated'],
-    ...advocates.map(a=>[a.serial||'',a.name,a.enrollment||'',a.address||'',a.phone,a.gasPhone||'',a.gasAddress||'',a.status,a.note,a.updated])];
+  const data=[['S.No','Name','Enrollment No.','Address','Phone','GAS Phone','GAS Address','Source','Work Place','Email','Status','Notes','Updated'],
+    ...advocates.map(a=>[a.serial||'',a.name,a.enrollment||'',a.address||'',a.phone,a.gasPhone||'',a.gasAddress||'',a.source||'',a.workplace||'',a.email||'',a.status,a.note,a.updated])];
   const csv=data.map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}); const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download='DBA-campaign-advocates.csv';a.click();URL.revokeObjectURL(url);
