@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">DBAElectionConnect</string>
+    <string name="title_activity_main">DBAElectionConnect</string>
+    <string name="package_name">com.dba.electionconnect</string>
+    <string name="custom_url_scheme">com.dba.electionconnect</string>
+</resources>
