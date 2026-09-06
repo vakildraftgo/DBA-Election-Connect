@@ -143,12 +143,16 @@
     <div class="templates">
       <div class="template">
         <b>Personal Appeal</b>
-        <p id="m1">Respected Sir/Ma'am, I humbly seek your support and vote for Adv. Amit Kumar Basatta for General Secretary, District Bar Association Faridabad. Election: 11 September 2026. Together for a Stronger Bar.</p>
+        <p id="m1">आदरणीय अधिवक्ता साथी, जिला बार एसोसिएशन, फरीदाबाद के आगामी चुनाव में General Secretary पद के लिए Adv. Amit Kumar Basatta आपके समर्थन एवं बहुमूल्य वोट की विनम्र अपेक्षा करते हैं। चुनाव: 11 सितंबर 2026। आपका सहयोग एवं आशीर्वाद हमारे लिए महत्वपूर्ण है। एक मजबूत बार के लिए — हम सब साथ।
+
+Respected Fellow Advocate, I humbly seek your support and valuable vote for Adv. Amit Kumar Basatta for General Secretary, District Bar Association, Faridabad. Election: 11 September 2026. Your support and blessings matter to us. Together for a Stronger Bar.</p>
         <button class="gold" onclick="copyText('m1')">COPY</button>
       </div>
       <div class="template">
         <b>Short Reminder</b>
-        <p id="m2">Kind reminder: Please support Adv. Amit Kumar Basatta for General Secretary, DBA Faridabad, on 11 September 2026. Your vote and blessings matter.</p>
+        <p id="m2">आदरणीय अधिवक्ता साथी, विनम्र स्मरण: 11 सितंबर 2026 को General Secretary पद के लिए Adv. Amit Kumar Basatta को अपना समर्थन एवं बहुमूल्य वोट दें। धन्यवाद।
+
+Respected Fellow Advocate, a kind reminder to support and vote for Adv. Amit Kumar Basatta for General Secretary, DBA Faridabad, on 11 September 2026. Thank you.</p>
         <button class="gold" onclick="copyText('m2')">COPY</button>
       </div>
     </div>
@@ -175,35 +179,56 @@ function addAdvocate(){
   const status=document.getElementById('status').value;
   const note=document.getElementById('note').value.trim();
   if(!name){alert('Please enter advocate name');return;}
-  advocates.unshift({id:Date.now(),serial:'',name,enrollment:'',address:'',phone,status,note,updated:new Date().toISOString()});
+  advocates.unshift({id:Date.now(),serial:'',name,enrollment:'',address:'',phone,gasPhone:'',gasAddress:'',status,note,updated:new Date().toISOString()});
   ['name','phone','note'].forEach(id=>document.getElementById(id).value='');
   save();
 }
 function updateStatus(id,st){const a=advocates.find(x=>x.id===id); if(a){a.status=st;a.updated=new Date().toISOString();save();}}
 function del(id){if(confirm('Delete this advocate?')){advocates=advocates.filter(x=>x.id!==id);save();}}
-function wa(id){
+function primaryPhone(a){return cleanPhone(a.phone||a.gasPhone||'');}
+function wa(id,which='primary'){
   const a=advocates.find(x=>x.id===id); if(!a)return;
-  const text=`Respected ${a.name}, I humbly seek your support and vote for Adv. Amit Kumar Basatta for General Secretary, District Bar Association Faridabad. Election: 11 September 2026. Together for a Stronger Bar.`;
-  let url='https://wa.me/';
-  if(a.phone) url+=a.phone;
-  url+='?text='+encodeURIComponent(text);
-  window.open(url,'_blank');
+  const phone=which==='gas'?cleanPhone(a.gasPhone||''):primaryPhone(a);
+  if(!phone){alert('No phone number saved for this advocate');return;}
+  const text=`आदरणीय अधिवक्ता साथी,
+
+जिला बार एसोसिएशन, फरीदाबाद के आगामी चुनाव में General Secretary पद के लिए Adv. Amit Kumar Basatta आपके समर्थन एवं बहुमूल्य वोट की विनम्र अपेक्षा करते हैं।
+चुनाव: 11 सितंबर 2026
+आपका सहयोग एवं आशीर्वाद हमारे लिए महत्वपूर्ण है।
+एक मजबूत बार के लिए — हम सब साथ।
+
+Respected Fellow Advocate,
+
+I humbly seek your support and valuable vote for Adv. Amit Kumar Basatta for General Secretary, District Bar Association, Faridabad.
+Election: 11 September 2026
+Your support and blessings matter to us.
+Together for a Stronger Bar.`;
+  window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(text),'_blank');
   if(a.status==='Not Contacted') updateStatus(id,'Contacted');
+}
+function callAdv(id,which='primary'){
+  const a=advocates.find(x=>x.id===id); if(!a)return;
+  const phone=which==='gas'?cleanPhone(a.gasPhone||''):primaryPhone(a);
+  if(!phone){alert('No phone number saved for this advocate');return;}
+  window.location.href='tel:+'+phone;
 }
 function render(){
   const q=(document.getElementById('search').value||'').toLowerCase();
   const f=document.getElementById('filter').value;
-  const rows=advocates.filter(a=>(!q||(a.name||'').toLowerCase().includes(q)||(a.phone||'').includes(q)||(a.enrollment||'').toLowerCase().includes(q)||(a.address||'').toLowerCase().includes(q))&&(f==='All'||a.status===f));
+  const rows=advocates.filter(a=>(!q||(a.name||'').toLowerCase().includes(q)||(a.phone||'').includes(q)||(a.enrollment||'').toLowerCase().includes(q)||(a.address||'').toLowerCase().includes(q)||(a.gasPhone||'').includes(q)||(a.gasAddress||'').toLowerCase().includes(q))&&(f==='All'||a.status===f));
   document.getElementById('list').innerHTML=rows.length?rows.map(a=>`
     <div class="adv">
       <div>
         <b>${escapeHtml(a.name)}</b><br>
-        <small>${a.enrollment?escapeHtml(a.enrollment)+' · ':''}${a.phone?escapeHtml(a.phone):'No phone saved'}</small>
+        <small>${a.enrollment?escapeHtml(a.enrollment)+' · ':''}${a.phone?escapeHtml(a.phone):'No official phone saved'}</small>
+        ${a.gasPhone && cleanPhone(a.gasPhone)!==cleanPhone(a.phone)?`<br><small>GAS: ${escapeHtml(a.gasPhone)}</small>`:''}
         ${a.address?`<br><small>${escapeHtml(a.address)}</small>`:''}
         <div class="chips"><span class="chip">${escapeHtml(a.status)}</span>${a.note?`<span class="chip">${escapeHtml(a.note)}</span>`:''}</div>
       </div>
       <div class="actions">
         <button class="primary" onclick="wa(${a.id})">WHATSAPP</button>
+        <button class="gold" onclick="callAdv(${a.id})">CALL</button>
+        ${a.gasPhone && cleanPhone(a.gasPhone)!==cleanPhone(a.phone)?`<button class="gold" onclick="callAdv(${a.id},'gas')">CALL 2</button>`:''}
         <select onchange="updateStatus(${a.id},this.value)" style="width:auto">
           ${['Not Contacted','Supporter','Undecided','Contact Later','Contacted'].map(s=>`<option ${s===a.status?'selected':''}>${s}</option>`).join('')}
         </select>
@@ -246,6 +271,8 @@ function mergeVoters(rows){
       enrollment:String(v['Enrollment No.']||v.enrollment||'').trim(),
       address:String(v.Address||v.address||'').trim(),
       phone:cleanPhone(rawPhone),
+      gasPhone:cleanPhone(String(v['GAS Phone']||v.gasPhone||'').trim()),
+      gasAddress:String(v['GAS Address']||v.gasAddress||'').trim(),
       status:old?.status || String(v.Status||v.status||'Not Contacted').trim() || 'Not Contacted',
       note:old?.note || String(v.Notes||v.note||'').trim(),
       updated:old?.updated || ''
@@ -285,8 +312,8 @@ function importCSV(event){
   reader.readAsText(file);
 }
 function exportCSV(){
-  const data=[['S.No','Name','Enrollment No.','Address','Phone','Status','Notes','Updated'],
-    ...advocates.map(a=>[a.serial||'',a.name,a.enrollment||'',a.address||'',a.phone,a.status,a.note,a.updated])];
+  const data=[['S.No','Name','Enrollment No.','Address','Phone','GAS Phone','GAS Address','Status','Notes','Updated'],
+    ...advocates.map(a=>[a.serial||'',a.name,a.enrollment||'',a.address||'',a.phone,a.gasPhone||'',a.gasAddress||'',a.status,a.note,a.updated])];
   const csv=data.map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}); const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download='DBA-campaign-advocates.csv';a.click();URL.revokeObjectURL(url);
