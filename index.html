@@ -29,7 +29,7 @@
     .hero h2{margin:0 0 10px;font-size:18px;font-weight:600}
     .tag{display:inline-block;background:rgba(255,255,255,.12);padding:7px 10px;border-radius:999px;margin:4px 6px 0 0}
     .count{font-size:28px;font-weight:700;margin-top:12px}
-    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
+    .grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:16px}
     .stat,.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:15px;box-shadow:0 4px 16px rgba(0,0,0,.04)}
     .stat b{display:block;font-size:26px;margin-top:4px}
     .section{margin-top:18px}
@@ -55,6 +55,12 @@
     .templates{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .template{background:white;border:1px solid var(--border);border-radius:14px;padding:12px}
     .footer{color:var(--muted);font-size:12px;margin:22px 0;text-align:center}
+    .progress{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin-top:8px}
+    .progress > span{display:block;height:100%;background:var(--good);width:0}
+    .notice{background:#f8fafc;border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-top:10px;font-size:13px;color:#475569}
+    .focusbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+    .focusbar button{padding:9px 12px}
+    .highlight{outline:3px solid var(--accent2);outline-offset:2px}
     @media(max-width:760px){
       .hero{grid-template-columns:100px 1fr;padding:14px}
       .hero img{
@@ -88,10 +94,24 @@
   </section>
 
   <div class="grid">
-    <div class="stat">Total Advocates<b id="sTotal">0</b></div>
+    <div class="stat">Total Contacts<b id="sTotal">0</b></div>
     <div class="stat">Supporters<b id="sSupport">0</b></div>
     <div class="stat">Undecided<b id="sUndecided">0</b></div>
     <div class="stat">Follow-up<b id="sFollow">0</b></div>
+    <div class="stat">Contacted<b id="sContacted">0</b></div>
+    <div class="stat">Remaining<b id="sRemaining">0</b></div>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <b>Campaign Contact Progress <span id="sPercent" style="float:right">0%</span></b>
+    <div class="progress"><span id="progressFill"></span></div>
+    <div class="focusbar">
+      <button class="primary" onclick="focusNext()">NEXT UNCONTACTED</button>
+      <button class="gold" onclick="showFollowUps()">SHOW FOLLOW-UPS</button>
+      <button class="ghost" onclick="backupJSON()">BACKUP DATA</button>
+      <button class="ghost" onclick="document.getElementById('backupImport').click()">RESTORE BACKUP</button>
+      <input id="backupImport" type="file" accept=".json,application/json" style="display:none" onchange="restoreJSON(event)">
+    </div>
+    <div class="notice">Backup saves your supporter/contacted statuses and notes. The app keeps using the same browser storage key, so normal website updates will not erase your campaign tracking.</div>
   </div>
 
   <section class="section card">
@@ -124,7 +144,7 @@
 
   <section class="section card">
     <div class="toolbar">
-      <input id="search" placeholder="Search advocate…" oninput="render()" style="flex:1;min-width:220px">
+      <input id="search" placeholder="Search name, phone, enrollment or address…" oninput="render()" style="flex:1;min-width:220px">
       <select id="filter" onchange="render()" style="width:auto">
         <option>All</option><option>Supporter</option><option>Undecided</option>
         <option>Contact Later</option><option>Contacted</option><option>Not Contacted</option>
@@ -210,14 +230,53 @@ function callAdv(id,which='primary'){
   const a=advocates.find(x=>x.id===id); if(!a)return;
   const phone=which==='gas'?cleanPhone(a.gasPhone||''):primaryPhone(a);
   if(!phone){alert('No phone number saved for this advocate');return;}
+  if(a.status==='Not Contacted'){a.status='Contacted';a.updated=new Date().toISOString();localStorage.setItem(KEY,JSON.stringify(advocates));}
   window.location.href='tel:+'+phone;
+  render();
+}
+function focusNext(){
+  document.getElementById('filter').value='Not Contacted';
+  document.getElementById('search').value='';
+  render();
+  const first=document.querySelector('.adv[data-has-phone="1"]');
+  if(!first){alert('No uncontacted advocate with a phone number found.');return;}
+  first.classList.add('highlight');
+  first.scrollIntoView({behavior:'smooth',block:'center'});
+  setTimeout(()=>first.classList.remove('highlight'),2500);
+}
+function showFollowUps(){
+  document.getElementById('filter').value='Contact Later';
+  document.getElementById('search').value='';
+  render();
+  document.getElementById('list').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function backupJSON(){
+  const payload={app:'DBA Election Connect',version:2,exported:new Date().toISOString(),advocates};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='DBA-campaign-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();URL.revokeObjectURL(url);
+}
+function restoreJSON(event){
+  const file=event.target.files?.[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const data=JSON.parse(String(reader.result||''));
+      const rows=Array.isArray(data)?data:data.advocates;
+      if(!Array.isArray(rows)) throw new Error('Invalid backup');
+      if(!confirm(`Restore ${rows.length} contacts from this backup? This will replace the current browser campaign data.`)) return;
+      advocates=rows; save(); alert('Backup restored successfully.');
+    }catch(e){alert('This does not look like a valid DBA campaign backup file.');}
+    event.target.value='';
+  };
+  reader.readAsText(file);
 }
 function render(){
   const q=(document.getElementById('search').value||'').toLowerCase();
   const f=document.getElementById('filter').value;
   const rows=advocates.filter(a=>(!q||(a.name||'').toLowerCase().includes(q)||(a.phone||'').includes(q)||(a.enrollment||'').toLowerCase().includes(q)||(a.address||'').toLowerCase().includes(q)||(a.gasPhone||'').includes(q)||(a.gasAddress||'').toLowerCase().includes(q)||(a.workplace||'').toLowerCase().includes(q)||(a.email||'').toLowerCase().includes(q))&&(f==='All'||a.status===f));
   document.getElementById('list').innerHTML=rows.length?rows.map(a=>`
-    <div class="adv">
+    <div class="adv" data-has-phone="${primaryPhone(a)?'1':'0'}">
       <div>
         <b>${escapeHtml(a.name)}</b><br>
         <small>${a.enrollment?escapeHtml(a.enrollment)+' · ':''}${a.phone?escapeHtml(a.phone):'No official phone saved'}</small>
@@ -236,10 +295,21 @@ function render(){
         <button class="danger" onclick="del(${a.id})">DELETE</button>
       </div>
     </div>`).join(''):'<small>No advocates added yet.</small>';
-  document.getElementById('sTotal').textContent=advocates.length;
-  document.getElementById('sSupport').textContent=advocates.filter(a=>a.status==='Supporter').length;
-  document.getElementById('sUndecided').textContent=advocates.filter(a=>a.status==='Undecided').length;
-  document.getElementById('sFollow').textContent=advocates.filter(a=>a.status==='Contact Later').length;
+  const total=advocates.length;
+  const supporters=advocates.filter(a=>a.status==='Supporter').length;
+  const undecided=advocates.filter(a=>a.status==='Undecided').length;
+  const follow=advocates.filter(a=>a.status==='Contact Later').length;
+  const contacted=advocates.filter(a=>a.status!=='Not Contacted').length;
+  const remaining=advocates.filter(a=>a.status==='Not Contacted').length;
+  const pct=total?Math.round((contacted/total)*100):0;
+  document.getElementById('sTotal').textContent=total;
+  document.getElementById('sSupport').textContent=supporters;
+  document.getElementById('sUndecided').textContent=undecided;
+  document.getElementById('sFollow').textContent=follow;
+  document.getElementById('sContacted').textContent=contacted;
+  document.getElementById('sRemaining').textContent=remaining;
+  document.getElementById('sPercent').textContent=pct+'%';
+  document.getElementById('progressFill').style.width=pct+'%';
 }
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 function csvParseLine(line){
@@ -329,7 +399,14 @@ function tick(){
   const days=Math.floor(d/86400000), hrs=Math.floor((d%86400000)/3600000), mins=Math.floor((d%3600000)/60000);
   document.getElementById('countdown').textContent=`${days}d ${hrs}h ${mins}m to Election Day`;
 }
-setInterval(tick,30000);tick();render();
+async function firstRunLoad(){
+  if(advocates.length) return;
+  try{
+    const r=await fetch('voters.json',{cache:'no-store'});
+    if(r.ok){const rows=await r.json();mergeVoters(rows);}
+  }catch(e){}
+}
+setInterval(tick,30000);tick();render();firstRunLoad();
 </script>
 </body>
 </html>
