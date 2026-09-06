@@ -129,6 +129,9 @@
         <option>All</option><option>Supporter</option><option>Undecided</option>
         <option>Contact Later</option><option>Contacted</option><option>Not Contacted</option>
       </select>
+      <button class="ghost" onclick="loadOfficialVoters()">LOAD OFFICIAL VOTER LIST</button>
+      <button class="ghost" onclick="document.getElementById('csvImport').click()">IMPORT CSV</button>
+      <input id="csvImport" type="file" accept=".csv,text/csv" style="display:none" onchange="importCSV(event)">
       <button class="ghost" onclick="exportCSV()">EXPORT CSV</button>
     </div>
     <h3>Advocate Campaign Tracker</h3>
@@ -172,7 +175,7 @@ function addAdvocate(){
   const status=document.getElementById('status').value;
   const note=document.getElementById('note').value.trim();
   if(!name){alert('Please enter advocate name');return;}
-  advocates.unshift({id:Date.now(),name,phone,status,note,updated:new Date().toISOString()});
+  advocates.unshift({id:Date.now(),serial:'',name,enrollment:'',address:'',phone,status,note,updated:new Date().toISOString()});
   ['name','phone','note'].forEach(id=>document.getElementById(id).value='');
   save();
 }
@@ -190,12 +193,13 @@ function wa(id){
 function render(){
   const q=(document.getElementById('search').value||'').toLowerCase();
   const f=document.getElementById('filter').value;
-  const rows=advocates.filter(a=>(!q||a.name.toLowerCase().includes(q)||(a.phone||'').includes(q))&&(f==='All'||a.status===f));
+  const rows=advocates.filter(a=>(!q||(a.name||'').toLowerCase().includes(q)||(a.phone||'').includes(q)||(a.enrollment||'').toLowerCase().includes(q)||(a.address||'').toLowerCase().includes(q))&&(f==='All'||a.status===f));
   document.getElementById('list').innerHTML=rows.length?rows.map(a=>`
     <div class="adv">
       <div>
         <b>${escapeHtml(a.name)}</b><br>
-        <small>${a.phone?escapeHtml(a.phone):'No phone saved'}</small>
+        <small>${a.enrollment?escapeHtml(a.enrollment)+' · ':''}${a.phone?escapeHtml(a.phone):'No phone saved'}</small>
+        ${a.address?`<br><small>${escapeHtml(a.address)}</small>`:''}
         <div class="chips"><span class="chip">${escapeHtml(a.status)}</span>${a.note?`<span class="chip">${escapeHtml(a.note)}</span>`:''}</div>
       </div>
       <div class="actions">
@@ -212,10 +216,79 @@ function render(){
   document.getElementById('sFollow').textContent=advocates.filter(a=>a.status==='Contact Later').length;
 }
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function csvParseLine(line){
+  const out=[]; let cur='', quoted=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(ch==='"'){
+      if(quoted && line[i+1]==='"'){cur+='"';i++;}
+      else quoted=!quoted;
+    } else if(ch===',' && !quoted){out.push(cur);cur='';}
+    else cur+=ch;
+  }
+  out.push(cur); return out;
+}
+function mergeVoters(rows){
+  const existing=new Map();
+  advocates.forEach(a=>{
+    const key=a.serial?`s:${a.serial}`:`n:${(a.name||'').toLowerCase()}|${a.phone||''}`;
+    existing.set(key,a);
+  });
+  rows.forEach(v=>{
+    const serial=Number(v['S.No']||v.serial||0)||'';
+    const rawPhone=String(v.Phone||v.phone||'').trim();
+    const key=serial?`s:${serial}`:`n:${String(v.Name||v.name||'').toLowerCase()}|${rawPhone}`;
+    const old=existing.get(key);
+    const item={
+      id: old?.id || (Date.now()+Math.random()),
+      serial,
+      name:String(v.Name||v.name||'').trim(),
+      enrollment:String(v['Enrollment No.']||v.enrollment||'').trim(),
+      address:String(v.Address||v.address||'').trim(),
+      phone:cleanPhone(rawPhone),
+      status:old?.status || String(v.Status||v.status||'Not Contacted').trim() || 'Not Contacted',
+      note:old?.note || String(v.Notes||v.note||'').trim(),
+      updated:old?.updated || ''
+    };
+    if(item.name) existing.set(key,item);
+  });
+  advocates=Array.from(existing.values()).sort((a,b)=>(Number(a.serial)||999999)-(Number(b.serial)||999999));
+  save();
+}
+async function loadOfficialVoters(){
+  try{
+    const r=await fetch('voters.json',{cache:'no-store'});
+    if(!r.ok) throw new Error('voters.json not found');
+    const rows=await r.json();
+    mergeVoters(rows);
+    alert(`${rows.length} official voter records loaded. Existing campaign statuses were preserved.`);
+  }catch(e){
+    alert('Could not load voters.json. Make sure voters.json is uploaded beside index.html on Render/GitHub.');
+  }
+}
+function importCSV(event){
+  const file=event.target.files?.[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const lines=String(reader.result||'').replace(/^\uFEFF/,'').split(/\r?\n/).filter(x=>x.trim());
+    if(lines.length<2){alert('CSV is empty');return;}
+    const headers=csvParseLine(lines[0]);
+    const rows=lines.slice(1).map(line=>{
+      const vals=csvParseLine(line), obj={};
+      headers.forEach((h,i)=>obj[h.trim()]=vals[i]??'');
+      return obj;
+    });
+    mergeVoters(rows);
+    alert(`${rows.length} voter records imported.`);
+    event.target.value='';
+  };
+  reader.readAsText(file);
+}
 function exportCSV(){
-  const data=[['Name','Phone','Status','Notes','Updated'],...advocates.map(a=>[a.name,a.phone,a.status,a.note,a.updated])];
+  const data=[['S.No','Name','Enrollment No.','Address','Phone','Status','Notes','Updated'],
+    ...advocates.map(a=>[a.serial||'',a.name,a.enrollment||'',a.address||'',a.phone,a.status,a.note,a.updated])];
   const csv=data.map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob);
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}); const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download='DBA-campaign-advocates.csv';a.click();URL.revokeObjectURL(url);
 }
 function copyText(id){navigator.clipboard.writeText(document.getElementById(id).innerText).then(()=>alert('Message copied'));}
